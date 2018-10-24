@@ -17,16 +17,6 @@ from warpctc_pytorch import CTCLoss
 
 DIGITS_MAP = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
 
-def load_data(name, test=False):
-    # Loads the numpy files
-    path = '../../dataset'
-    features = np.load(os.path.join(path, '{}.npy'.format(name)))
-    if test:
-        labels = np.array([np.zeros((1,), dtype=np.int64) for _ in range(features.shape[0])])
-    else:
-        labels = np.load(os.path.join(path, '{}_phonemes.npy'.format(name)))
-    return features, labels
-
 
 class DigitsModel(nn.Module):
 
@@ -51,9 +41,9 @@ class DigitsModel(nn.Module):
     def forward(self, features):
         # features: n, 1, h, w
         embedding = self.embed(features)
-        # embed: t, n, f
         n, c, h, w = embedding.size()
         embedding = embedding.view(n, c*h, w).permute(2, 0, 1)
+        # embed: t, n, f
         h = embedding
         for l in self.rnns:
             h, _ = l(h)
