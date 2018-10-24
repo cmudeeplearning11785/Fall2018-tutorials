@@ -29,7 +29,7 @@ def load_data(name, test=False):
 
 
 class DigitsModel(nn.Module):
-    # Model is 3 LSTM and a linear projection
+
     def __init__(self):
         super(DigitsModel, self).__init__()
         self.embed = nn.Sequential(
@@ -75,20 +75,6 @@ class CTCCriterion(CTCLoss):
         )
 
 
-def calc_transcripts(features, feature_lengths, label_lengths, model, label_map, decoder):
-    features = Variable(features)
-    logits, _a, _b = model(features, feature_lengths, label_lengths)
-    logits = torch.transpose(logits, 0, 1)
-    probs = F.softmax(logits, dim=2).data.cpu()
-    output, scores, timesteps, out_seq_len = decoder.decode(probs=probs, seq_lens=feature_lengths)
-
-    for i in range(output.size(0)):
-        chrs = []
-        for o in output[i, 0, :out_seq_len[i, 0]]:
-            chrs.append(label_map[o])
-        yield "".join(chrs)
-
-
 class ER:
 
     def __init__(self):
@@ -113,7 +99,7 @@ class ER:
         pos = 0
         ls = 0.
         for i in range(output.size(0)):
-            pred = "".join(self.label_map[o] for o in output[i, 0, :10])
+            pred = "".join(self.label_map[o] for o in output[i, 0, :out_seq_len[i, 0]])
             true = "".join(self.label_map[l] for l in labels[pos:pos + 10])
             #print("Pred: {}, True: {}".format(pred, true))
             pos += 10
@@ -143,13 +129,13 @@ def run_eval(model, test_dataset):
 
 def run():
     best_eval = None
-    epochs = 100
+    epochs = 20
     batch_size = 32
     model = DigitsModel()
     model = model.cuda() if torch.cuda.is_available() else model
 
-    labels = torch.Tensor(np.load('data/dataset/labels.npy')).type(torch.LongTensor)
-    data = torch.Tensor(np.load('data/dataset/data.npy'))
+    labels = torch.Tensor(np.load('dataset/labels.npy')).type(torch.LongTensor)
+    data = torch.Tensor(np.load('dataset/data.npy'))
 
     # 80/20 train/val split
     cutoff = int(0.8 * len(labels))
